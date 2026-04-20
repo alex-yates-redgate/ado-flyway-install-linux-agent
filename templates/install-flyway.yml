@@ -6,7 +6,7 @@
 #   FLYWAY_EMAIL    - Redgate account email address
 #   FLYWAY_PAT      - Redgate personal access token
 #   FLYWAY_VERSION  - Version to install: "latest" (default) or a specific version e.g. "11.9.2"
-#   FLYWAY_EDITION  - "Community" (default) or "Enterprise"
+#   FLYWAY_EDITION  - "Community" (default), "Teams", or "Enterprise"
 #
 # Steps:
 #   1. Resolve the requested version and check whether it is already correctly installed.
@@ -31,7 +31,7 @@ parameters:
   - name: FLYWAY_EDITION
     type: string
     default: 'Community'
-    displayName: 'Flyway edition ("Community" or "Enterprise")'
+    displayName: 'Flyway edition ("Community", "Teams", or "Enterprise")'
 
 steps:
 
@@ -51,13 +51,19 @@ steps:
 
       echo "##vso[task.setvariable variable=FLYWAY_DESIRED_VERSION]$DESIRED_VERSION"
 
+      # Validate edition
+      EDITION="${{ parameters.FLYWAY_EDITION }}"
+      if [[ "$EDITION" != "Community" && "$EDITION" != "Enterprise" && "$EDITION" != "Teams" ]]; then
+        echo "##[error]FLYWAY_EDITION must be 'Community', 'Enterprise', or 'Teams', got: '$EDITION'"
+        exit 1
+      fi
+
       # Check whether the correct version and edition are already present
       NEEDS_INSTALL="true"
-      EDITION="${{ parameters.FLYWAY_EDITION }}"
 
       if command -v flyway &>/dev/null; then
         echo "Flyway binary found at: $(command -v flyway)"
-        VERSION_OUTPUT=$(flyway --version 2>&1 || true)
+        VERSION_OUTPUT=$(flyway --version 2>&1)
         echo "--- flyway --version output ---"
         echo "$VERSION_OUTPUT"
         echo "-------------------------------"
@@ -88,7 +94,7 @@ steps:
       echo "Downloading Flyway ${VERSION} from:"
       echo "  $DOWNLOAD_URL"
 
-      wget -qO- "$DOWNLOAD_URL" | tar -xz
+      curl -fsSL "$DOWNLOAD_URL" | tar -xz
 
       sudo ln -sf "$PWD/flyway-${VERSION}/flyway" /usr/local/bin/flyway
 
@@ -104,7 +110,7 @@ steps:
       EDITION="${{ parameters.FLYWAY_EDITION }}"
 
       echo "Verifying Flyway ${EDITION} Edition ${VERSION}..."
-      VERSION_OUTPUT=$(flyway --version 2>&1 || true)
+      VERSION_OUTPUT=$(flyway --version 2>&1)
       echo "--- flyway --version output ---"
       echo "$VERSION_OUTPUT"
       echo "-------------------------------"

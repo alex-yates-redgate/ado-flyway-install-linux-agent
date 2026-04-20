@@ -24,7 +24,7 @@ The repository is intentionally kept flat so it can be used as a starting point 
    | `FLYWAY_EMAIL` | Your Redgate account email address | No |
    | `FLYWAY_PAT` | Your Redgate personal access token | **Yes** |
    | `FLYWAY_VERSION` | Version to install: `latest` or a specific version e.g. `11.9.2` | No |
-   | `FLYWAY_EDITION` | `Community` or `Enterprise` | No |
+   | `FLYWAY_EDITION` | `Community`, `Teams`, or `Enterprise` | No |
 
 3. **Pipeline permissions** — authorise the variable group for use by the pipeline the first time it runs.
 
