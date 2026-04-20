@@ -99,11 +99,13 @@ steps:
       echo "Downloading Flyway ${VERSION} from:"
       echo "  $DOWNLOAD_URL"
 
+      sudo rm -rf /opt/flyway
       curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /opt
+      sudo mv "/opt/flyway-${VERSION}" /opt/flyway
 
-      sudo ln -sf "/opt/flyway-${VERSION}/flyway" /usr/local/bin/flyway
+      sudo ln -sf /opt/flyway/flyway /usr/local/bin/flyway
 
-      echo "Flyway ${VERSION} installed to /usr/local/bin/flyway -> /opt/flyway-${VERSION}/flyway"
+      echo "Flyway ${VERSION} installed to /usr/local/bin/flyway -> /opt/flyway/flyway"
     displayName: 'Install Flyway'
     condition: eq(variables['FLYWAY_NEEDS_INSTALL'], 'true')
 
