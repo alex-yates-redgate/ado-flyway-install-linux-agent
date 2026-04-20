@@ -41,7 +41,7 @@ steps:
 
       # Resolve the desired version
       DESIRED_VERSION="${{ parameters.FLYWAY_VERSION }}"
-      if [ "$DESIRED_VERSION" = "latest" ]; then
+      if [ "${DESIRED_VERSION,,}" = "latest" ]; then
         echo "Querying latest Flyway release version from maven-metadata.xml..."
         DESIRED_VERSION=$(curl -fsSL \
           "https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/maven-metadata.xml" \
@@ -51,12 +51,17 @@ steps:
 
       echo "##vso[task.setvariable variable=FLYWAY_DESIRED_VERSION]$DESIRED_VERSION"
 
-      # Validate edition
-      EDITION="${{ parameters.FLYWAY_EDITION }}"
-      if [[ "$EDITION" != "Community" && "$EDITION" != "Enterprise" && "$EDITION" != "Teams" ]]; then
-        echo "##[error]FLYWAY_EDITION must be 'Community', 'Enterprise', or 'Teams', got: '$EDITION'"
-        exit 1
-      fi
+      # Validate and normalise edition (accept any casing)
+      EDITION_INPUT="${{ parameters.FLYWAY_EDITION }}"
+      case "${EDITION_INPUT,,}" in
+        community)  EDITION="Community" ;;
+        teams)      EDITION="Teams" ;;
+        enterprise) EDITION="Enterprise" ;;
+        *)
+          echo "##[error]FLYWAY_EDITION must be 'Community', 'Teams', or 'Enterprise', got: '$EDITION_INPUT'"
+          exit 1
+          ;;
+      esac
 
       # Check whether the correct version and edition are already present
       NEEDS_INSTALL="true"
@@ -107,7 +112,12 @@ steps:
       set -eo pipefail
 
       VERSION="$(FLYWAY_DESIRED_VERSION)"
-      EDITION="${{ parameters.FLYWAY_EDITION }}"
+      EDITION_INPUT="${{ parameters.FLYWAY_EDITION }}"
+      case "${EDITION_INPUT,,}" in
+        community)  EDITION="Community" ;;
+        teams)      EDITION="Teams" ;;
+        enterprise) EDITION="Enterprise" ;;
+      esac
 
       echo "Verifying Flyway ${EDITION} Edition ${VERSION}..."
       VERSION_OUTPUT=$(flyway --version 2>&1)

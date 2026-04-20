@@ -17,7 +17,7 @@ The repository is intentionally kept flat so it can be used as a starting point 
 
 1. **Redgate account** — sign up at <https://www.red-gate.com/> and create a personal access token (PAT).
 
-2. **Azure DevOps variable group** — go to *Pipelines › Library* and create a group called **`flyway-credentials`** containing the following variables:
+2. **Azure DevOps variable group** — go to *Pipelines › Library* and create a group called **`flyway-general`** containing the following variables:
 
    | Variable | Description | Secret? |
    |---|---|---|

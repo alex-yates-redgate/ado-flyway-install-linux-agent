@@ -2,7 +2,7 @@
 #
 # Sample pipeline that installs and licences Flyway on a Linux agent.
 #
-# Prerequisites — create a variable group called "flyway-credentials" in
+# Prerequisites — create a variable group called "flyway-general" in
 # Pipelines > Library and add the following variables:
 #
 #   FLYWAY_EMAIL    - Your Redgate account email address
@@ -19,7 +19,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  - group: flyway-credentials  # Must contain: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
+  - group: flyway-general  # Must contain: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
 
 steps:
   - template: templates/install-flyway.yml
