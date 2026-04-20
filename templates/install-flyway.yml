@@ -1,0 +1,122 @@
+# templates/install-flyway.yml
+#
+# Reusable template that installs, licences, and verifies Flyway on a Linux agent.
+#
+# Parameters:
+#   FLYWAY_EMAIL    - Redgate account email address
+#   FLYWAY_PAT      - Redgate personal access token
+#   FLYWAY_VERSION  - Version to install: "latest" (default) or a specific version e.g. "11.9.2"
+#   FLYWAY_EDITION  - "Community" (default) or "Enterprise"
+#
+# Steps:
+#   1. Resolve the requested version and check whether it is already correctly installed.
+#      If it is, the remaining steps are skipped.
+#   2. (conditional) Download and install Flyway.
+#   3. (conditional) Verify the newly installed version and edition.
+
+parameters:
+  - name: FLYWAY_EMAIL
+    type: string
+    displayName: 'Redgate account email address'
+
+  - name: FLYWAY_PAT
+    type: string
+    displayName: 'Redgate personal access token (mapped to the FLYWAY_TOKEN environment variable that Flyway expects)'
+
+  - name: FLYWAY_VERSION
+    type: string
+    default: 'latest'
+    displayName: 'Flyway version to install ("latest" or a specific version e.g. "11.9.2")'
+
+  - name: FLYWAY_EDITION
+    type: string
+    default: 'Community'
+    displayName: 'Flyway edition ("Community" or "Enterprise")'
+
+steps:
+
+  # ── Step 1: Resolve version and check whether Flyway is already correctly installed ──────────
+  - bash: |
+      set -eo pipefail
+
+      # Resolve the desired version
+      DESIRED_VERSION="${{ parameters.FLYWAY_VERSION }}"
+      if [ "$DESIRED_VERSION" = "latest" ]; then
+        echo "Querying latest Flyway release version from maven-metadata.xml..."
+        DESIRED_VERSION=$(curl -fsSL \
+          "https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/maven-metadata.xml" \
+          | grep -oP '(?<=<release>)[^<]+')
+        echo "Latest release: $DESIRED_VERSION"
+      fi
+
+      echo "##vso[task.setvariable variable=FLYWAY_DESIRED_VERSION]$DESIRED_VERSION"
+
+      # Check whether the correct version and edition are already present
+      NEEDS_INSTALL="true"
+      EDITION="${{ parameters.FLYWAY_EDITION }}"
+
+      if command -v flyway &>/dev/null; then
+        echo "Flyway binary found at: $(command -v flyway)"
+        VERSION_OUTPUT=$(flyway --version 2>&1 || true)
+        echo "--- flyway --version output ---"
+        echo "$VERSION_OUTPUT"
+        echo "-------------------------------"
+
+        if echo "$VERSION_OUTPUT" | grep -q "Flyway ${EDITION} Edition ${DESIRED_VERSION}"; then
+          echo "Flyway ${EDITION} Edition ${DESIRED_VERSION} is already installed and licenced correctly."
+          NEEDS_INSTALL="false"
+        else
+          echo "Installed version/edition does not match. Installation required."
+        fi
+      else
+        echo "Flyway is not installed."
+      fi
+
+      echo "##vso[task.setvariable variable=FLYWAY_NEEDS_INSTALL]$NEEDS_INSTALL"
+    displayName: 'Check Flyway installation'
+    env:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_TOKEN: ${{ parameters.FLYWAY_PAT }}  # Flyway reads FLYWAY_TOKEN; the pipeline variable is named FLYWAY_PAT
+
+  # ── Step 2: Download and install Flyway (only if needed) ─────────────────────────────────────
+  - bash: |
+      set -eo pipefail
+
+      VERSION="$(FLYWAY_DESIRED_VERSION)"
+      DOWNLOAD_URL="https://download.red-gate.com/maven/release/com/redgate/flyway/flyway-commandline/${VERSION}/flyway-commandline-${VERSION}-linux-x64.tar.gz"
+
+      echo "Downloading Flyway ${VERSION} from:"
+      echo "  $DOWNLOAD_URL"
+
+      wget -qO- "$DOWNLOAD_URL" | tar -xz
+
+      sudo ln -sf "$PWD/flyway-${VERSION}/flyway" /usr/local/bin/flyway
+
+      echo "Flyway ${VERSION} installed to /usr/local/bin/flyway"
+    displayName: 'Install Flyway'
+    condition: eq(variables['FLYWAY_NEEDS_INSTALL'], 'true')
+
+  # ── Step 3: Verify the installation (only if step 2 ran) ─────────────────────────────────────
+  - bash: |
+      set -eo pipefail
+
+      VERSION="$(FLYWAY_DESIRED_VERSION)"
+      EDITION="${{ parameters.FLYWAY_EDITION }}"
+
+      echo "Verifying Flyway ${EDITION} Edition ${VERSION}..."
+      VERSION_OUTPUT=$(flyway --version 2>&1 || true)
+      echo "--- flyway --version output ---"
+      echo "$VERSION_OUTPUT"
+      echo "-------------------------------"
+
+      if ! echo "$VERSION_OUTPUT" | grep -q "Flyway ${EDITION} Edition ${VERSION}"; then
+        echo "##[error]Flyway verification failed. Expected: Flyway ${EDITION} Edition ${VERSION}"
+        exit 1
+      fi
+
+      echo "Flyway ${EDITION} Edition ${VERSION} installed and licenced successfully."
+    displayName: 'Verify Flyway installation'
+    condition: eq(variables['FLYWAY_NEEDS_INSTALL'], 'true')
+    env:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_TOKEN: ${{ parameters.FLYWAY_PAT }}  # Flyway reads FLYWAY_TOKEN; the pipeline variable is named FLYWAY_PAT
