@@ -100,7 +100,7 @@ steps:
       echo "  $DOWNLOAD_URL"
 
       sudo rm -rf /opt/flyway
-      curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /opt
+      sudo curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /opt
       sudo mv "/opt/flyway-${VERSION}" /opt/flyway
 
       sudo ln -sf /opt/flyway/flyway /usr/local/bin/flyway
