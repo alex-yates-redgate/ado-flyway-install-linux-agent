@@ -1,0 +1,65 @@
+# main-cicd.yml
+#
+# Main branch CI/CD pipeline — automatic deployment to Dev + test execution.
+#
+# Trigger: Push to main (after PR merge)
+#
+# Flow:
+#   1. Deploy to Dev (automatic)
+#   2. Run integration/regression tests (automatic)
+#
+# For manual deployments to any environment (including Dev), use migrate.yml instead.
+#
+# Prerequisites:
+#   - Variable group "flyway-general" with: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none  # PR validation is handled by pr-validation.yml
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: flyway-general
+
+stages:
+  # ══════════════════════════════════════════════════════════════════════════════
+  # STAGE 1: Deploy to Dev (Automatic)
+  # ══════════════════════════════════════════════════════════════════════════════
+  - stage: Dev
+    displayName: 'Deploy to Dev'
+    jobs:
+      - job: DeployDev
+        displayName: 'Flyway Migrate to Dev'
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+
+          - template: templates/flyway-migrate.yml
+            parameters:
+              FLYWAY_EMAIL: $(FLYWAY_EMAIL)
+              FLYWAY_PAT: $(FLYWAY_PAT)
+              FLYWAY_VERSION: $(FLYWAY_VERSION)
+              FLYWAY_EDITION: $(FLYWAY_EDITION)
+              ENVIRONMENT: 'Dev'
+              FLYWAY_TARGET: ''      # Dev always gets all migrations
+              FLYWAY_CHERRYPICK: ''
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # STAGE 2: Run Tests (Automatic after Dev)
+  # ══════════════════════════════════════════════════════════════════════════════
+  - stage: Test
+    displayName: 'Run Tests'
+    dependsOn: Dev
+    jobs:
+      - job: RunTests
+        displayName: 'Integration & Regression Tests'
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+
+          - template: templates/run-tests.yml

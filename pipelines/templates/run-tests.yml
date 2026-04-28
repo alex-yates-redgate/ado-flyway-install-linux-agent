@@ -1,0 +1,46 @@
+# pipelines/templates/run-tests.yml
+#
+# Reusable template for running integration and regression tests.
+#
+# This is a placeholder template. Replace with actual test commands.
+
+steps:
+  - bash: |
+      set -eo pipefail
+
+      echo "========================================"
+      echo "PLACEHOLDER - Integration Tests"
+      echo "To do: Implement this step"
+      echo "========================================"
+      echo ""
+      echo "This step will run integration tests against the Dev environment."
+      echo ""
+      echo "Example commands to add:"
+      echo "  - Run database integration tests"
+      echo "  - Validate data integrity"
+      echo "  - Test stored procedures"
+      echo ""
+    displayName: 'Run integration tests'
+
+  - bash: |
+      set -eo pipefail
+
+      echo "========================================"
+      echo "PLACEHOLDER - Regression Tests"
+      echo "To do: Implement this step"
+      echo "========================================"
+      echo ""
+      echo "This step will run regression tests against the Dev environment."
+      echo ""
+      echo "Example commands to add:"
+      echo "  - Run application regression suite"
+      echo "  - Validate API endpoints"
+      echo "  - Check for breaking changes"
+      echo ""
+    displayName: 'Run regression tests'
+
+  - bash: |
+      echo "========================================"
+      echo "All tests completed successfully!"
+      echo "========================================"
+    displayName: 'Test summary'

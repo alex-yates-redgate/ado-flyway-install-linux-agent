@@ -1,0 +1,96 @@
+# pipelines/templates/flyway-migrate.yml
+#
+# Reusable template that runs Flyway migrate.
+#
+# Parameters:
+#   FLYWAY_EMAIL      - Redgate account email address
+#   FLYWAY_PAT        - Redgate personal access token
+#   FLYWAY_VERSION    - Version to install: "latest" (default) or a specific version
+#   FLYWAY_EDITION    - "Community" (default), "Teams", or "Enterprise"
+#   ENVIRONMENT       - Target environment (Dev, PreProd, Prod). Used for both ADO environment
+#                       approval gates AND Flyway environment configuration. These are assumed
+#                       to be the same.
+#   FLYWAY_TARGET     - Optional: Target version to migrate to (Flyway -target parameter)
+#   FLYWAY_CHERRYPICK - Optional: Comma-separated list of migrations to cherry-pick
+#                       (Flyway -cherryPick parameter)
+
+parameters:
+  - name: FLYWAY_EMAIL
+    type: string
+    displayName: 'Redgate account email address'
+
+  - name: FLYWAY_PAT
+    type: string
+    displayName: 'Redgate personal access token'
+
+  - name: FLYWAY_VERSION
+    type: string
+    default: 'latest'
+    displayName: 'Flyway CLI version to install'
+
+  - name: FLYWAY_EDITION
+    type: string
+    default: 'Community'
+    displayName: 'Flyway edition (Community, Teams, or Enterprise)'
+
+  - name: ENVIRONMENT
+    type: string
+    displayName: 'Target environment (maps to both ADO and Flyway environments)'
+
+  - name: FLYWAY_TARGET
+    type: string
+    default: ''
+    displayName: 'Target version to migrate to (optional, Flyway -target parameter)'
+
+  - name: FLYWAY_CHERRYPICK
+    type: string
+    default: ''
+    displayName: 'Cherry-pick migrations (optional, Flyway -cherryPick parameter)'
+
+steps:
+  # Install Flyway first
+  - template: install-flyway.yml
+    parameters:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_PAT: ${{ parameters.FLYWAY_PAT }}
+      FLYWAY_VERSION: ${{ parameters.FLYWAY_VERSION }}
+      FLYWAY_EDITION: ${{ parameters.FLYWAY_EDITION }}
+
+  # Run Flyway migrate
+  - bash: |
+      set -eo pipefail
+
+      ENVIRONMENT="${{ parameters.ENVIRONMENT }}"
+      TARGET="${{ parameters.FLYWAY_TARGET }}"
+      CHERRYPICK="${{ parameters.FLYWAY_CHERRYPICK }}"
+
+      echo "========================================"
+      echo "Flyway Migrate - $ENVIRONMENT"
+      echo "========================================"
+
+      # Build the flyway command arguments
+      ARGS=""
+
+      if [ -n "$TARGET" ]; then
+        echo "Target version: $TARGET"
+        ARGS="$ARGS -target=$TARGET"
+      fi
+
+      if [ -n "$CHERRYPICK" ]; then
+        echo "Cherry-pick: $CHERRYPICK"
+        ARGS="$ARGS -cherryPick=$CHERRYPICK"
+      fi
+
+      echo ""
+      echo "Running: flyway migrate -environment=$ENVIRONMENT $ARGS"
+      echo "----------------------------------------"
+
+      echo "##[warning]TODO: Uncomment the actual flyway invocation below."
+      # flyway migrate -environment=$ENVIRONMENT $ARGS
+
+      echo "----------------------------------------"
+      echo "Migration complete."
+    displayName: 'Run Flyway migrate to ${{ parameters.ENVIRONMENT }}'
+    env:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_TOKEN: ${{ parameters.FLYWAY_PAT }}

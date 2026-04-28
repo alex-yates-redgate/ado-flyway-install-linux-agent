@@ -1,4 +1,4 @@
-# templates/install-flyway.yml
+# pipelines/templates/install-flyway.yml
 #
 # Reusable template that installs, licences, and verifies Flyway on a Linux agent.
 #
@@ -100,7 +100,7 @@ steps:
       echo "  $DOWNLOAD_URL"
 
       sudo rm -rf /opt/flyway
-      sudo curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /opt
+      curl -fsSL "$DOWNLOAD_URL" | sudo tar -xz -C /opt
       sudo mv "/opt/flyway-${VERSION}" /opt/flyway
 
       sudo ln -sf /opt/flyway/flyway /usr/local/bin/flyway

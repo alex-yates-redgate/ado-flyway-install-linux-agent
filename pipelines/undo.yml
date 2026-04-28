@@ -1,0 +1,71 @@
+# undo.yml
+#
+# Manual undo pipeline for Dev, PreProd, and Prod environments.
+#
+# Trigger: Manual only (Run pipeline button)
+#
+# Prerequisites:
+#   - Variable group "flyway-general" with: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
+#   - Azure DevOps Environments "Dev", "PreProd" and "Prod" with approval gates configured
+#     (Project Settings > Environments > Create/Edit > Approvals and checks)
+#
+# Parameters:
+#   - ENVIRONMENT: Target environment (Dev, PreProd, or Prod). This maps to both the ADO
+#                  environment (for approval gates) and the Flyway environment (in flyway.toml).
+#   - FLYWAY_TARGET: Optional target version to undo to (Flyway -target parameter)
+#   - FLYWAY_CHERRYPICK: Optional comma-separated list of migrations to cherry-pick for undo
+#                        (Flyway -cherryPick parameter)
+
+trigger: none  # Manual only
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+  - name: ENVIRONMENT
+    displayName: 'Target Environment (maps to both ADO and Flyway environments)'
+    type: string
+    default: 'Dev'
+    values:
+      - Dev
+      - PreProd
+      - Prod
+
+  - name: FLYWAY_TARGET
+    displayName: 'Target version to undo to (optional - leave empty to undo last migration)'
+    type: string
+    default: ''
+
+  - name: FLYWAY_CHERRYPICK
+    displayName: 'Cherry-pick migrations to undo (optional - comma-separated, e.g., "V1.0.5,V1.0.6")'
+    type: string
+    default: ''
+
+variables:
+  - group: flyway-general
+
+stages:
+  - stage: Undo
+    displayName: 'Undo on ${{ parameters.ENVIRONMENT }}'
+    jobs:
+      - deployment: Undo
+        displayName: 'Flyway Undo on ${{ parameters.ENVIRONMENT }}'
+        environment: ${{ parameters.ENVIRONMENT }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout source code'
+
+                - template: templates/flyway-undo.yml
+                  parameters:
+                    FLYWAY_EMAIL: $(FLYWAY_EMAIL)
+                    FLYWAY_PAT: $(FLYWAY_PAT)
+                    FLYWAY_VERSION: $(FLYWAY_VERSION)
+                    FLYWAY_EDITION: $(FLYWAY_EDITION)
+                    ENVIRONMENT: ${{ parameters.ENVIRONMENT }}
+                    FLYWAY_TARGET: ${{ parameters.FLYWAY_TARGET }}
+                    FLYWAY_CHERRYPICK: ${{ parameters.FLYWAY_CHERRYPICK }}

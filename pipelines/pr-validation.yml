@@ -1,0 +1,41 @@
+# pr-validation.yml
+#
+# PR validation pipeline - runs Flyway check commands and publishes a report.
+#
+# Configure this pipeline as a Build Validation policy on the 'main' branch:
+#   1. Go to Repos > Branches
+#   2. Click the '...' menu on 'main' > Branch policies
+#   3. Under Build Validation, add a policy pointing to this pipeline
+#
+# Prerequisites:
+#   - Variable group "flyway-general" with: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
+
+trigger: none  # This pipeline is triggered by PR policy, not by commits
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: flyway-general
+
+stages:
+  - stage: PRValidation
+    displayName: 'PR Validation'
+    jobs:
+      - job: FlywayCheck
+        displayName: 'Flyway Check'
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+
+          - template: templates/flyway-check.yml
+            parameters:
+              FLYWAY_EMAIL: $(FLYWAY_EMAIL)
+              FLYWAY_PAT: $(FLYWAY_PAT)
+              FLYWAY_VERSION: $(FLYWAY_VERSION)
+              FLYWAY_EDITION: $(FLYWAY_EDITION)

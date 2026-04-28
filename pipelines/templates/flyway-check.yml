@@ -1,0 +1,97 @@
+# pipelines/templates/flyway-check.yml
+#
+# Reusable template that runs Flyway check commands and generates a report.
+#
+# Parameters:
+#   FLYWAY_EMAIL    - Redgate account email address
+#   FLYWAY_PAT      - Redgate personal access token
+#   FLYWAY_VERSION  - Version to install: "latest" (default) or a specific version
+#   FLYWAY_EDITION  - "Community" (default), "Teams", or "Enterprise"
+
+parameters:
+  - name: FLYWAY_EMAIL
+    type: string
+    displayName: 'Redgate account email address'
+
+  - name: FLYWAY_PAT
+    type: string
+    displayName: 'Redgate personal access token'
+
+  - name: FLYWAY_VERSION
+    type: string
+    default: 'latest'
+    displayName: 'Flyway version'
+
+  - name: FLYWAY_EDITION
+    type: string
+    default: 'Community'
+    displayName: 'Flyway edition'
+
+steps:
+  # Install Flyway first
+  - template: install-flyway.yml
+    parameters:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_PAT: ${{ parameters.FLYWAY_PAT }}
+      FLYWAY_VERSION: ${{ parameters.FLYWAY_VERSION }}
+      FLYWAY_EDITION: ${{ parameters.FLYWAY_EDITION }}
+
+  # Run Flyway check commands and generate report
+  - bash: |
+      set -eo pipefail
+
+      REPORT_DIR="$(Build.ArtifactStagingDirectory)/reports"
+      mkdir -p "$REPORT_DIR"
+
+      echo "========================================"
+      echo "Flyway Check - PR Validation"
+      echo "========================================"
+      echo ""
+      echo "Build: $(Build.BuildId)"
+      echo "Branch: $(Build.SourceBranch)"
+      echo "Commit: $(Build.SourceVersion)"
+      echo ""
+
+      # Run flyway check with all sub-checks and generate HTML report
+      # -code: Static code analysis
+      # -changes: Change report (requires build database)
+      # -drift: Drift detection (requires build and target databases)
+      #
+      # Note: Adjust the checks based on your Flyway edition and requirements.
+      # Some checks require Teams or Enterprise edition.
+
+      echo "Running: flyway check -code -changes -drift -reportFilename=$REPORT_DIR/flyway-check-report.html"
+      echo "----------------------------------------"
+
+      echo "##[warning]TODO: Uncomment the actual flyway invocation below."
+      # flyway check -code -changes -drift -reportFilename="$REPORT_DIR/flyway-check-report.html"
+
+      # Create a placeholder report until the actual flyway command is enabled
+      cat > "$REPORT_DIR/flyway-check-report.html" << 'PLACEHOLDER_EOF'
+      <!DOCTYPE html>
+      <html>
+      <head><title>Flyway Check Report - Placeholder</title></head>
+      <body>
+        <h1>Flyway Check Report</h1>
+        <p><strong>Status:</strong> Placeholder</p>
+        <p>The actual Flyway check command is not yet enabled.</p>
+        <p>To enable, edit <code>templates/flyway-check.yml</code> and uncomment the <code>flyway check</code> command.</p>
+        <hr>
+        <p><em>This placeholder report was generated to prevent the artifact publish step from failing.</em></p>
+      </body>
+      </html>
+      PLACEHOLDER_EOF
+
+      echo "----------------------------------------"
+      echo "Check complete. Report generated at: $REPORT_DIR/flyway-check-report.html"
+    displayName: 'Run Flyway check commands'
+    env:
+      FLYWAY_EMAIL: ${{ parameters.FLYWAY_EMAIL }}
+      FLYWAY_TOKEN: ${{ parameters.FLYWAY_PAT }}
+
+  # Publish report as artifact
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)/reports'
+      artifactName: 'flyway-check-report'
+    displayName: 'Publish Flyway check report'

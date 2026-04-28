@@ -1,0 +1,78 @@
+# migrate.yml
+#
+# Manual migration pipeline for any environment (Dev, PreProd, Prod).
+#
+# Trigger: Manual only (Run pipeline button)
+#
+# Use cases:
+#   - Regular deployments to PreProd and Prod
+#   - Cherry-pick deployments (hotfixes)
+#   - Re-deploying to Dev after an undo
+#
+# For automatic Dev deployment on merge to main, see main-cicd.yml.
+#
+# Prerequisites:
+#   - Variable group "flyway-general" with: FLYWAY_EMAIL, FLYWAY_PAT, FLYWAY_VERSION, FLYWAY_EDITION
+#   - Azure DevOps Environments with approval gates configured as needed
+#     (Project Settings > Environments > Create/Edit > Approvals and checks)
+#
+# Parameters:
+#   - ENVIRONMENT: Target environment (Dev, PreProd, or Prod). This maps to both the ADO
+#                  environment (for approval gates) and the Flyway environment (in flyway.toml).
+#   - FLYWAY_TARGET: Optional target version to migrate to (Flyway -target parameter)
+#   - FLYWAY_CHERRYPICK: Optional comma-separated list of migrations to cherry-pick
+#                        (Flyway -cherryPick parameter)
+
+trigger: none  # Manual only
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+  - name: ENVIRONMENT
+    displayName: 'Target Environment (maps to both ADO and Flyway environments)'
+    type: string
+    default: 'PreProd'
+    values:
+      - Dev
+      - PreProd
+      - Prod
+
+  - name: FLYWAY_TARGET
+    displayName: 'Target version (optional - leave empty to migrate to latest)'
+    type: string
+    default: ''
+
+  - name: FLYWAY_CHERRYPICK
+    displayName: 'Cherry-pick migrations (optional - comma-separated, e.g., "V1.0.5,V1.0.6")'
+    type: string
+    default: ''
+
+variables:
+  - group: flyway-general
+
+stages:
+  - stage: Deploy
+    displayName: 'Deploy to ${{ parameters.ENVIRONMENT }}'
+    jobs:
+      - deployment: Deploy
+        displayName: 'Flyway Migrate to ${{ parameters.ENVIRONMENT }}'
+        environment: ${{ parameters.ENVIRONMENT }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout source code'
+
+                - template: templates/flyway-migrate.yml
+                  parameters:
+                    FLYWAY_EMAIL: $(FLYWAY_EMAIL)
+                    FLYWAY_PAT: $(FLYWAY_PAT)
+                    FLYWAY_VERSION: $(FLYWAY_VERSION)
+                    FLYWAY_EDITION: $(FLYWAY_EDITION)
+                    ENVIRONMENT: ${{ parameters.ENVIRONMENT }}
+                    FLYWAY_TARGET: ${{ parameters.FLYWAY_TARGET }}
+                    FLYWAY_CHERRYPICK: ${{ parameters.FLYWAY_CHERRYPICK }}
